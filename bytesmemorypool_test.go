@@ -255,17 +255,17 @@ func TestMemoryPool_Get(t *testing.T) {
 		n int
 	}
 	tests := []struct {
-		name string
-		mp   *MemoryPool
-		args args
-		want []byte
+		name    string
+		mp      *MemoryPool
+		args    args
+		wantCap int
 	}{
-		// TODO: Add test cases.
+		{name: "", mp: NewMemoryPool(), args: args{n: 0}, wantCap: 64},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.mp.Get(tt.args.n); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MemoryPool.Get() = %v, want %v", got, tt.want)
+			if got := tt.mp.Get(tt.args.n); cap(got) != tt.wantCap {
+				t.Errorf("MemoryPool.Get() = %v, want %v", got, tt.wantCap)
 			}
 		})
 	}

@@ -9,7 +9,7 @@ import (
 const (
 	minByteSize = 6  // 2**6 = 64 byes
 	maxByteSize = 26 // 2**26 = 64M bytes
-	sizes       = maxByteSize - minByteSize
+	sizes       = maxByteSize - minByteSize + 1
 )
 
 var (
@@ -26,7 +26,7 @@ type bytesPool struct {
 	puts int32 // Call Put() count.
 }
 
-func (bp *bytesPool) loadPuts() int32       { return atomic.LoadInt32(&bp.puts) }
+func (bp bytesPool) loadPuts() int32        { return atomic.LoadInt32(&bp.puts) }
 func (bp *bytesPool) addPuts(v int32) int32 { return atomic.AddInt32(&bp.puts, v) }
 func (bp *bytesPool) storePuts(v int32)     { atomic.StoreInt32(&bp.puts, v) }
 
@@ -58,7 +58,7 @@ func NewMemoryPool() *MemoryPool {
 	for i := range mp.pools {
 		mp.pools[i] = bytesPool{
 			pool: &sync.Pool{},
-			size: int32(bsize(int32(i + minByteSize))),
+			size: int32(i + minByteSize),
 			puts: 0,
 		}
 	}
@@ -75,23 +75,28 @@ func (mp *MemoryPool) Get(n int) []byte {
 		return make([]byte, 0, n)
 	}
 	idx := nextSizeIndex(int32(n))
-	bs := bsize(idx + minByteSize)
 	if idx < 0 { // if n > bsize(minBytesSize)
 		idx = 0
 	}
+	bs := bsize(idx + minByteSize)
 	idx1 := idx
-	for ; idx1 < sizes; idx++ {
-		if mp.pools[idx1].puts != 0 {
+	var sumPuts int32
+	for ; idx1 < sizes; idx1++ {
+		sumPuts += mp.pools[idx1].loadPuts()
+		if sumPuts != 0 {
 			break
 		}
 	}
-	if idx1 != sizes {
+	if sumPuts != 0 {
 		idx = idx1
 	}
+
 	b := mp.pools[idx].Get()
-	b1 := b[bs:bs:len(b)]
-	b = b[:0:bs]
-	mp.Put(&b1)
+	if sumPuts != 0 {
+		b1 := b[bs:bs:len(b)]
+		b = b[:0:bs]
+		mp.Put(&b1)
+	}
 	return b
 }
 
