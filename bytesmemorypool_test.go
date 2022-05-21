@@ -6,88 +6,6 @@ import (
 	"testing"
 )
 
-func Test_bsize(t *testing.T) {
-	type args struct {
-		n int32
-	}
-	tests := []struct {
-		name string
-		args args
-		want int
-	}{
-		{name: "", args: args{n: 6}, want: 64},
-		{name: "", args: args{n: 10}, want: 1024},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := bsize(tt.args.n); got != tt.want {
-				t.Errorf("bsize() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_bytesPool_loadPuts(t *testing.T) {
-	tests := []struct {
-		name string
-		bp   *bytesPool
-		want int32
-	}{
-		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 6, puts: 10}, want: 10},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.bp.loadPuts(); got != tt.want {
-				t.Errorf("bytesPool.loadPuts() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_bytesPool_addPuts(t *testing.T) {
-	type args struct {
-		v int32
-	}
-	tests := []struct {
-		name string
-		bp   *bytesPool
-		args args
-		want int32
-	}{
-		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 6, puts: 10}, args: args{v: 1}, want: 11},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.bp.addPuts(tt.args.v); got != tt.want {
-				t.Errorf("bytesPool.addPuts() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_bytesPool_storePuts(t *testing.T) {
-	type args struct {
-		v int32
-	}
-	tests := []struct {
-		name string
-		bp   *bytesPool
-		args args
-		want int32
-	}{
-		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 6, puts: 10}, args: args{v: 100}, want: 100},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.bp.storePuts(tt.args.v)
-			got := tt.bp.loadPuts()
-			if got != tt.want {
-				t.Errorf("bytesPool.storePuts() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_bytesPool_Get(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -132,6 +50,8 @@ func Test_bytesPool_Put(t *testing.T) {
 		wantPuts int32
 		wantCap  int
 	}{
+		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 6, puts: 0}, args: args{b: nil}, wantPuts: 0, wantCap: 64},
+		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 6, puts: 0}, args: args{b: make([]byte, 0, 63)}, wantPuts: 0, wantCap: 64},
 		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 6, puts: 0}, args: args{b: make([]byte, 0, 64)}, wantPuts: 1, wantCap: 64},
 		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 10, puts: 0}, args: args{b: make([]byte, 0, 1024)}, wantPuts: 1, wantCap: 1024},
 		{name: "", bp: &bytesPool{pool: &sync.Pool{}, size: 6, puts: 0}, args: args{b: make([]byte, 0, 64)}, wantPuts: 1, wantCap: 64},
@@ -154,42 +74,6 @@ func Test_bytesPool_Put(t *testing.T) {
 	}
 }
 
-func TestNewMemoryPool(t *testing.T) {
-	tests := []struct {
-		name string
-		want *MemoryPool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewMemoryPool(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewMemoryPool() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_nextSize(t *testing.T) {
-	type args struct {
-		n int32
-	}
-	tests := []struct {
-		name string
-		args args
-		want int32
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := nextSize(tt.args.n); got != tt.want {
-				t.Errorf("nextSize() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_nextSizeIndex(t *testing.T) {
 	type args struct {
 		n int32
@@ -199,52 +83,16 @@ func Test_nextSizeIndex(t *testing.T) {
 		args args
 		want int32
 	}{
-		// TODO: Add test cases.
+		{name: "", args: args{n: 0}, want: 0},
+		{name: "", args: args{n: 64}, want: 0},
+		{name: "", args: args{n: 100}, want: 1},
+		{name: "", args: args{n: 1024}, want: 4},
+		{name: "", args: args{n: 1025}, want: 5},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := nextSizeIndex(tt.args.n); got != tt.want {
 				t.Errorf("nextSizeIndex() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_prevSize(t *testing.T) {
-	type args struct {
-		n int32
-	}
-	tests := []struct {
-		name string
-		args args
-		want int32
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := prevSize(tt.args.n); got != tt.want {
-				t.Errorf("prevSize() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_prevSizeIndex(t *testing.T) {
-	type args struct {
-		n int32
-	}
-	tests := []struct {
-		name string
-		args args
-		want int32
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := prevSizeIndex(tt.args.n); got != tt.want {
-				t.Errorf("prevSizeIndex() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -258,14 +106,30 @@ func TestMemoryPool_Get(t *testing.T) {
 		name    string
 		mp      *MemoryPool
 		args    args
+		putSize int
 		wantCap int
 	}{
-		{name: "", mp: NewMemoryPool(), args: args{n: 0}, wantCap: 64},
+		{name: "", mp: NewMemoryPool(), args: args{n: 0}, putSize: 0, wantCap: 64},
+		{name: "", mp: NewMemoryPool(), args: args{n: 32}, putSize: 0, wantCap: 64},
+		{name: "", mp: NewMemoryPool(), args: args{n: 63}, putSize: 0, wantCap: 64},
+		{name: "", mp: NewMemoryPool(), args: args{n: 64}, putSize: 0, wantCap: 64},
+		{name: "", mp: NewMemoryPool(), args: args{n: 100}, putSize: 0, wantCap: 128},
+		{name: "", mp: NewMemoryPool(), args: args{n: 1024}, putSize: 0, wantCap: 1024},
+		{name: "", mp: NewMemoryPool(), args: args{n: 1025}, putSize: 0, wantCap: 2048},
+		{name: "", mp: NewMemoryPool(), args: args{n: 0}, putSize: 64, wantCap: 64},
+		{name: "", mp: NewMemoryPool(), args: args{n: 0}, putSize: 128, wantCap: 64},
+		{name: "", mp: NewMemoryPool(), args: args{n: 100}, putSize: 128, wantCap: 128},
+		{name: "", mp: NewMemoryPool(), args: args{n: bsize(27) + 1}, putSize: 0, wantCap: bsize(27) + 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.mp.Get(tt.args.n); cap(got) != tt.wantCap {
-				t.Errorf("MemoryPool.Get() = %v, want %v", got, tt.wantCap)
+			if tt.putSize != 0 {
+				b := make([]byte, 0, tt.putSize)
+				tt.mp.Put(&b)
+			}
+			got := tt.mp.Get(tt.args.n)
+			if c := cap(got); c != tt.wantCap {
+				t.Errorf("MemoryPool.Get() cap = %v, want %v", c, tt.wantCap)
 			}
 		})
 	}
@@ -273,37 +137,31 @@ func TestMemoryPool_Get(t *testing.T) {
 
 func TestMemoryPool_Put(t *testing.T) {
 	type args struct {
-		b *[]byte
+		b []byte
 	}
 	tests := []struct {
-		name string
-		mp   *MemoryPool
-		args args
+		name     string
+		mp       *MemoryPool
+		args     args
+		wantPuts [21]int32
 	}{
-		// TODO: Add test cases.
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 0)}, wantPuts: [21]int32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 63)}, wantPuts: [21]int32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 64)}, wantPuts: [21]int32{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 100)}, wantPuts: [21]int32{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 128)}, wantPuts: [21]int32{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 500)}, wantPuts: [21]int32{1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 1000)}, wantPuts: [21]int32{1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, bsize(27))}, wantPuts: [21]int32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, bsize(28))}, wantPuts: [21]int32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4}},
+		{name: "", mp: NewMemoryPool(), args: args{b: make([]byte, 0, 1000+bsize(28))}, wantPuts: [21]int32{1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.mp.Put(tt.args.b)
-		})
-	}
-}
-
-func Test_alloc(t *testing.T) {
-	type args struct {
-		n int32
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := alloc(tt.args.n); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("alloc() = %v, want %v", got, tt.want)
+			tt.mp.Put(&tt.args.b)
+			p := tt.mp.loadPuts()
+			if !reflect.DeepEqual(p, tt.wantPuts) {
+				t.Errorf("MemoryPool.Put() puts = %v, want %v", p, tt.wantPuts)
 			}
 		})
 	}

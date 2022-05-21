@@ -65,10 +65,21 @@ func NewMemoryPool() *MemoryPool {
 	return &mp
 }
 
-func nextSize(n int32) int32      { return int32(bits.Len32(uint32(n << 1))) }
-func nextSizeIndex(n int32) int32 { return nextSize(n) - minByteSize }
-func prevSize(n int32) int32      { return int32(bits.Len32(uint32(n >> 1))) }
-func prevSizeIndex(n int32) int32 { return prevSize(n) - minByteSize }
+func (mp MemoryPool) loadPuts() [sizes]int32 {
+	var x [sizes]int32
+	for i := range mp.pools {
+		x[i] = mp.pools[i].loadPuts()
+	}
+	return x
+}
+
+func nextSizeIndex(n int32) int32 {
+	if n <= 0 {
+		return 0
+	}
+	l := int32(bits.Len32(uint32(n-1)<<1)) - 1
+	return l - minByteSize
+}
 
 func (mp *MemoryPool) Get(n int) []byte {
 	if n > bsize(maxByteSize) {
@@ -92,19 +103,19 @@ func (mp *MemoryPool) Get(n int) []byte {
 	}
 
 	b := mp.pools[idx].Get()
-	if sumPuts != 0 {
-		b1 := b[bs:bs:len(b)]
-		b = b[:0:bs]
-		mp.Put(&b1)
-	}
+	b1 := b[bs:bs:cap(b)]
+	b = b[:0:bs]
+	mp.Put(&b1)
 	return b
 }
 
 func (mp *MemoryPool) Put(b *[]byte) {
-	c := cap(*b)
 	var idx int32
-	for c0 := c >> minByteSize; c0 != 0; c0 >>= 1 {
-		if (c0 & 1) != 0 {
+	c := cap(*b)
+	// Put cap <= 2**(maxByteSize)
+	c0 := c & (1<<maxByteSize - 1)
+	for c1 := c0 >> minByteSize; c1 != 0; c1 >>= 1 {
+		if (c1 & 1) != 0 {
 			bs := bsize(idx + minByteSize)
 			b1 := (*b)[:0:bs]
 			*b = (*b)[bs:bs:cap(*b)]
@@ -112,8 +123,9 @@ func (mp *MemoryPool) Put(b *[]byte) {
 		}
 		idx++
 	}
+	// Put cap > 2**(maxByteSize)
 	idx = sizes - 1
-	for c1 := c >> maxByteSize; c1 < 0; c1-- {
+	for c2 := c >> maxByteSize; c2 > 0; c2-- {
 		bs := bsize(idx + minByteSize)
 		b1 := (*b)[:0:bs]
 		*b = (*b)[bs:bs:cap(*b)]
