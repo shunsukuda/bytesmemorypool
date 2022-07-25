@@ -81,6 +81,19 @@ func nextSizeIndex(n int32) int32 {
 	return l - minByteSize
 }
 
+// Make bytes slice of same size as MemoryPool.Get().
+func MakeByteSlice(n int) []byte {
+	if n > bsize(maxByteSize) {
+		return make([]byte, 0, n)
+	}
+	idx := nextSizeIndex(int32(n))
+	if idx < 0 { // if n > bsize(minBytesSlize)
+		idx = 0
+	}
+	bs := bsize(idx + minByteSize)
+	return make([]byte, 0, bs)
+}
+
 func (mp *MemoryPool) Get(n int) []byte {
 	if n > bsize(maxByteSize) {
 		return make([]byte, 0, n)

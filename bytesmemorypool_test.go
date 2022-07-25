@@ -166,3 +166,33 @@ func TestMemoryPool_Put(t *testing.T) {
 		})
 	}
 }
+
+func TestMakeByteSlice(t *testing.T) {
+	type args struct {
+		n int
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantCap int
+	}{
+		{name: "", args: args{n: 0}, wantCap: 64},
+		{name: "", args: args{n: 32}, wantCap: 64},
+		{name: "", args: args{n: 63}, wantCap: 64},
+		{name: "", args: args{n: 64}, wantCap: 64},
+		{name: "", args: args{n: 100}, wantCap: 128},
+		{name: "", args: args{n: 1024}, wantCap: 1024},
+		{name: "", args: args{n: 1025}, wantCap: 2048},
+		{name: "", args: args{n: 0}, wantCap: 64},
+		{name: "", args: args{n: 0}, wantCap: 64},
+		{name: "", args: args{n: 100}, wantCap: 128},
+		{name: "", args: args{n: bsize(27) + 1}, wantCap: bsize(27) + 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := MakeByteSlice(tt.args.n); cap(got) != tt.wantCap {
+				t.Errorf("MakeByteSlice() cap = %v, want %v", got, tt.wantCap)
+			}
+		})
+	}
+}
